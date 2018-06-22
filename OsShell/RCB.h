@@ -1,3 +1,10 @@
+/**
+* FileName: RCB.h
+* Author: ZiQin
+* BuildDate: 2018-6-22
+* Version: v2.0.0
+*/
+
 #pragma once
 
 #include <iostream>

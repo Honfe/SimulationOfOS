@@ -1,3 +1,10 @@
+/**
+* FileName: PcbList
+* Author: ZiQin
+* BuildDate:2018-5-31
+* Version:	1.0.0
+*/
+
 #pragma once
 
 #include "PCB.h"

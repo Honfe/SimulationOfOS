@@ -1,3 +1,10 @@
+/**
+* FileName: main
+* Author: ZiQin
+* BuildDate: 2018-6-22
+* Version: 1.1.1
+*/
+
 #include <iostream>
 #include <cstring>
 #include <vector>
@@ -81,7 +88,7 @@ int main()
 	nm.push_back("KeyBoard");
 	nm.push_back("Disk");
 	int num[4] = { 1, 2, 3, 4 };
-	core.initial(4, num, nm);
+	core.initial(4, num, nm);	// 初始化内核并开启内核
 	int pid = core.begin();
 	cout << "---------" << core.getVersion() << " begin--------" << endl;
 	cout << "pid = " << pid << " is running!" << endl << endl;

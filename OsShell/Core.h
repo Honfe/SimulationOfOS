@@ -1,3 +1,10 @@
+/**
+* FileName: Core.h
+* Author: ZiQin
+* BuildDate: 2018-6-22
+* Version: 1.1.0
+*/
+
 #pragma once
 
 #include "Manager.h"
