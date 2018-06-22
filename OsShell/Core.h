@@ -11,6 +11,7 @@ private:
 	Manager manager;
 	std::string version;
 	bool run;
+	bool on;
 
 public:
 	Core(int prio = 3);
@@ -48,6 +49,8 @@ public:
 	std::string getVersion();
 
 	bool isRunning();
+
+	bool isOn();
 
 	std::string getManagerErrorMsg();
 	int getManagerErrorCode();

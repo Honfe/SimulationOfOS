@@ -5,6 +5,7 @@ Core::Core(int prio)
 {
 	version = __CORE_VERSION;
 	run = false;
+	on = false;
 }
 
 Core::Core(int prio, int rcb, int * rcbNum, std::vector<std::string> nm)
@@ -12,6 +13,7 @@ Core::Core(int prio, int rcb, int * rcbNum, std::vector<std::string> nm)
 {
 	version = __CORE_VERSION;
 	run = false;
+	on = false;
 }
 
 Core::~Core()
@@ -20,6 +22,7 @@ Core::~Core()
 
 bool Core::initial(int rcb, int * rcbResNum, std::vector<std::string> nm)
 {
+	on = true; // 假装打开了内核，并初始化系统所需要的资源
 	for (int i = 0; i < rcb; i++) {
 		manager.addRcb(nm[i], rcbResNum[i]);
 	}
@@ -121,6 +124,7 @@ void Core::restart()
 void Core::exit()
 {
 	run = false;
+	on = false;
 	deletePcbByPid(0);
 }
 
@@ -132,6 +136,11 @@ std::string Core::getVersion()
 bool Core::isRunning()
 {
 	return run;
+}
+
+bool Core::isOn()
+{
+	return on;
 }
 
 std::string Core::getManagerErrorMsg()

@@ -11,33 +11,6 @@
 
 using namespace std;
 
-enum {
-	cr = 1,
-	de,
-	depid,
-	req,
-	reqrid,
-	rel,
-	relrid,
-	to,
-	listpcb,
-	listrcb,
-	shutdown,
-	clear,
-	sleep,
-	help,
-	version,
-	restart
-};
-
-map<string, int> mapFunc = {
-	{"-cr", cr}, {"-de", de}, {"-depid", depid}, {"-req", req},
-	{"-reqrid", reqrid}, {"-rel", rel }, {"-relrid", relrid}, {"-to", to}	,
-	{"-listpcb", listpcb}, {"-listrcb", listrcb}, {"-exit", shutdown},
-	{"-clear", clear}, {"-sleep", sleep}, {"-help", help},
-	{"-version", version}, {"-restart", restart}
-};
-
 std::vector<std::string> split(std::string str, std::string pattern);
 
 void printSystemMsg(string msg);
@@ -78,6 +51,27 @@ void commandHelp(Core & core, vector<string> item);
 
 void showCoreVersion(Core & core, vector<string> item);
 
+typedef void(*coreFunction)(Core&, vector<string>);
+
+map<string, coreFunction> mapFunction = {
+	{ "-cr", createPcb },
+	{ "-de", deletePcbByName },
+	{ "-depid", deletePcbByPid },
+	{ "-req", requestRcbByName },
+	{ "-reqrid", requestRcbByRid },
+	{ "-rel", releaseRcbByName },
+	{ "-relrid", releaseRcbByRid },
+	{ "-to", timeOut }	,
+	{ "-listpcb", listAllPcb },
+	{ "-listrcb", listAllRcb },
+	{ "-exit",  shutdownCore },
+	{ "-clear", clearScreen },
+	{ "-sleep", sleepCore },
+	{ "-help", commandHelp },
+	{ "-version", showCoreVersion },
+	{ "-restart", restartCore }
+};
+
 int main()
 {
 	Core core(3);
@@ -93,6 +87,8 @@ int main()
 	cout << "pid = " << pid << " is running!" << endl << endl;
 	string cmd;
 	while (true) {
+		if (!core.isOn())		// 如果内核被关闭，则结束程序
+			break;
 		if (!core.isRunning()) {
 			printSystemMsg("OS is sleeping...\n");
 			system("pause");
@@ -104,60 +100,14 @@ int main()
 			continue;
 		}
 		vector<string> item = split(cmd, " ");
-		switch (mapFunc[item[0]]) {
-		case cr:
-			createPcb(core, item);
-			break;
-		case de:
-			deletePcbByName(core, item);
-			break;
-		case depid:
-			deletePcbByPid(core, item);
-			break;
-		case req:
-			requestRcbByName(core, item);
-			break;
-		case reqrid:
-			requestRcbByRid(core, item);
-			break;
-		case rel:
-			releaseRcbByName(core, item);
-			break;
-		case relrid:
-			releaseRcbByRid(core, item);
-			break;
-		case to:
-			timeOut(core, item);
-			break;
-		case listpcb:
-			listAllPcb(core, item);
-			break;
-		case listrcb:
-			listAllRcb(core, item);
-			break;
-		case clear:
-			clearScreen(core, item);
-			break;
-		case sleep:
-			sleepCore(core, item);
-			break;
-		case help:
-			commandHelp(core, item);
-			break;
-		case version:
-			showCoreVersion(core, item);
-			break;
-		case shutdown:
-			shutdownCore(core, item);
-			return 0;
-		case restart:
-			restartCore(core, item);
-			break;
-		default:
+		// 执行函数
+		if (mapFunction.find(item[0]) != mapFunction.end()) {
+			mapFunction[item[0]](core, item);
+		}
+		else {
 			printSystemMsg(ERR_ENTER);
 		}
 	}
-
 	return 0;
 }
 
@@ -415,7 +365,7 @@ void commandHelp(Core & core, vector<string> item)
 	printSystemMsg(" -depid <pid>\t\t\tDelete pcb by pid");
 	printSystemMsg(" -req <name> <number>\t\tRequest rcb by name");
 	printSystemMsg(" -reqrid <rid> <number>\t\tRequest rcb by rid");
-	printSystemMsg(" -rel <name>\t\t\tRelease rcb by name");
+	printSystemMsg(" -rel <name> <number>\t\tRelease rcb by name");
 	printSystemMsg(" -relrid <rid> <number>\t\tRelease rcb by rid");
 	printSystemMsg(" -to\t\t\t\tTime out");
 	printSystemMsg(" -listpcb\t\t\tList all pcb");
