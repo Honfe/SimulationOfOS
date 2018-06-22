@@ -1,16 +1,16 @@
 #include "Core.h"
 
-Core::Core(int prio, std::string ver)
+Core::Core(int prio)
 	: manager(prio)
 {
-	version = ver;
+	version = __CORE_VERSION;
 	run = false;
 }
 
-Core::Core(int prio, int rcb, int * rcbNum, std::vector<std::string> nm, std::string ver)
+Core::Core(int prio, int rcb, int * rcbNum, std::vector<std::string> nm)
 	: manager(prio, rcb, rcbNum, nm)
 {
-	version = ver;
+	version = __CORE_VERSION;
 	run = false;
 }
 
@@ -75,14 +75,14 @@ bool Core::requestRcb(std::string nm, int num)
 	return manager.requestRcbForPcbByName(nm, num);
 }
 
-bool Core::releaseRcb(int rid)
+bool Core::releaseRcb(int rid, int num)
 {
-	return manager.releaseRcbForPcb(rid);
+	return manager.releaseRcbForPcb(rid, num);
 }
 
-bool Core::releaseRcb(std::string nm)
+bool Core::releaseRcb(std::string nm, int num)
 {
-	return manager.releaseRcbForPcbByName(nm);
+	return manager.releaseRcbForPcbByName(nm, num);
 }
 
 int Core::suspendCore()
@@ -111,9 +111,17 @@ int Core::timeOut()
 	return manager.timeOut();
 }
 
+void Core::restart()
+{
+	exit();
+	manager.restart();
+	begin();
+}
+
 void Core::exit()
 {
-	
+	run = false;
+	deletePcbByPid(0);
 }
 
 std::string Core::getVersion()
@@ -124,4 +132,14 @@ std::string Core::getVersion()
 bool Core::isRunning()
 {
 	return run;
+}
+
+std::string Core::getManagerErrorMsg()
+{
+	return manager.getLatestErrStr();
+}
+
+int Core::getManagerErrorCode()
+{
+	return manager.getLatestErrCode();
 }

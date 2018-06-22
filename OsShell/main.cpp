@@ -26,7 +26,8 @@ enum {
 	clear,
 	sleep,
 	help,
-	version
+	version,
+	restart
 };
 
 map<string, int> mapFunc = {
@@ -34,7 +35,7 @@ map<string, int> mapFunc = {
 	{"-reqrid", reqrid}, {"-rel", rel }, {"-relrid", relrid}, {"-to", to}	,
 	{"-listpcb", listpcb}, {"-listrcb", listrcb}, {"-exit", shutdown},
 	{"-clear", clear}, {"-sleep", sleep}, {"-help", help},
-	{"-version", version}
+	{"-version", version}, {"-restart", restart}
 };
 
 std::vector<std::string> split(std::string str, std::string pattern);
@@ -71,13 +72,15 @@ void clearScreen(Core & core, vector<string> item);
 
 void sleepCore(Core & core, vector<string> item);
 
+void restartCore(Core & core, vector<string> item);
+
 void commandHelp(Core & core, vector<string> item);
 
 void showCoreVersion(Core & core, vector<string> item);
 
 int main()
 {
-	Core core(3, "Happy OS v1.0");
+	Core core(3);
 	vector<string> nm;
 	nm.push_back("Printer");
 	nm.push_back("IO");
@@ -147,6 +150,9 @@ int main()
 		case shutdown:
 			shutdownCore(core, item);
 			return 0;
+		case restart:
+			restartCore(core, item);
+			break;
 		default:
 			printSystemMsg(ERR_ENTER);
 		}
@@ -177,7 +183,7 @@ std::vector<std::string> split(std::string str, std::string pattern)
 
 void printSystemMsg(string msg)
 {
-	cout << msg << endl;
+	cout << msg << endl << endl;
 }
 
 bool str2num(const string & numStr, int & num)
@@ -207,11 +213,12 @@ void createPcb(Core & core, vector<string> item)
 		printSystemMsg(ERR_ENTER);
 		return;
 	}
-	if ((pid = core.createPcb(prio, item[1])) != -1) {
-		printSystemMsg("Create pcb successful!");
+	pid = core.createPcb(prio, item[1]);
+	if (core.getManagerErrorCode() != __manager_NO_ERR) {
+		printSystemMsg(core.getManagerErrorMsg());
 	}
 	else {
-		printSystemMsg("Create pcb fail!");
+		cout << "Create pcb successful, pid = " << pid << endl << endl;
 	}
 }
 
@@ -223,7 +230,7 @@ void deletePcbByName(Core & core, vector<string> item)
 	}
 	int pid = core.deletePcbByName(item[1]);
 	if (pid == -1) {
-		printSystemMsg("Delete pcb fail!");
+		printSystemMsg(core.getManagerErrorMsg());
 	}
 	else {
 		printSystemMsg("Delete pcb successful!");
@@ -245,7 +252,7 @@ void deletePcbByPid(Core & core, vector<string> item)
 		printSystemMsg("Delete pcb successful!");
 	}
 	else {
-		printSystemMsg("Delete pcb fail!");
+		printSystemMsg(core.getManagerErrorMsg());
 	}
 }
 
@@ -264,7 +271,7 @@ void requestRcbByName(Core & core, vector<string> item)
 		printSystemMsg("Request rcb successful!");
 	}
 	else {
-		printSystemMsg("Requset rcb fail!");
+		printSystemMsg(core.getManagerErrorMsg());
 	}
 }
 
@@ -287,28 +294,32 @@ void requestRcbByRid(Core & core, vector<string> item)
 		printSystemMsg("Request rcb successful!");
 	}
 	else {
-		printSystemMsg("Request rcb fail!");
+		printSystemMsg(core.getManagerErrorMsg());
 	}
 }
 
 void releaseRcbByName(Core & core, vector<string> item)
 {
-	if (!checkCmdValid(item, 2)) {
+	if (!checkCmdValid(item, 3)) {
 		printSystemMsg(ERR_ENTER);
 		return;
 	}
-	int rid;
-	if (core.releaseRcb(item[1])) {
+	int num;
+	if (!str2num(item[2], num)) {
+		printSystemMsg(ERR_ENTER);
+		return;
+	}
+	if (core.releaseRcb(item[1], num)) {
 		printSystemMsg("Release rcb successful!");
 	}
 	else {
-		printSystemMsg("Release rcb fail!");
+		printSystemMsg(core.getManagerErrorMsg());
 	}
 }
 
 void releaseRcbByRid(Core & core, vector<string> item)
 {
-	if (!checkCmdValid(item, 2)) {
+	if (!checkCmdValid(item, 3)) {
 		printSystemMsg(ERR_ENTER);
 		return;
 	}
@@ -317,11 +328,16 @@ void releaseRcbByRid(Core & core, vector<string> item)
 		printSystemMsg(ERR_ENTER);
 		return;
 	}
-	if (core.releaseRcb(rid)) {
+	int num;
+	if (!str2num(item[2], num)) {
+		printSystemMsg(ERR_ENTER);
+		return;
+	}
+	if (core.releaseRcb(rid, num)) {
 		printSystemMsg("Release rcb successful!");
 	}
 	else {
-		printSystemMsg("Release rcb fail!");
+		printSystemMsg(core.getManagerErrorMsg());
 	}
 }
 
@@ -332,7 +348,7 @@ void timeOut(Core & core, vector<string> item)
 		return;
 	}
 	int pid = core.timeOut();
-	cout << "Now running pcb is pid = " << pid << endl;
+	cout << "Now running pcb is pid = " << pid << endl << endl;
 }
 
 void listAllPcb(Core & core, vector<string> item)
@@ -383,6 +399,12 @@ void sleepCore(Core & core, vector<string> item)
 {
 	int pid = core.suspendCore();
 	cout << "Running pcb has been stopped(pid = " << pid <<")" << endl;
+}
+
+void restartCore(Core & core, vector<string> item)
+{
+	core.restart();
+	printSystemMsg("Core restart complete!");
 }
 
 void commandHelp(Core & core, vector<string> item)

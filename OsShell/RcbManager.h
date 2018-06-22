@@ -19,8 +19,8 @@ public:
 	~RcbManager();
 
 	void addResource(std::string nm = "Unknown", int rcbResourceNum = 1);
-	Rcb * findRcbByRid(int rid);
-	Rcb * findRcbByName(std::string nm);
+	Rcb * findRcb(int rid);
+	Rcb * findRcb(std::string nm);
 	bool checkRcbValid(int rid);
 	std::vector<Pcb*> getReadyPcb();
 	std::vector<RcbInfo> getRcbInfoList();

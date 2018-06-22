@@ -12,44 +12,46 @@ PcbManager::~PcbManager()
 
 int PcbManager::createPcb(Pcb * par, std::string nm, int prio)
 {
-	Pcb * pcb = new Pcb(par, nm, prio);
-	pcb->changeStatus(ready);
+	Pcb * pcb = new Pcb(par, prio, nm);
+	if (pcb == nullptr)
+		return -1;
+	pcb->changeStatus(ready);			// 默认刚新创的进程为就绪态
 	pcb->changeList(&readyList);
 	readyList.insertPcbList(pcb);
 	totalList.insertPcbList(pcb);
 	return pcb->getPid();
 }
 
-bool PcbManager::destroyPcb(int pid)
+int PcbManager::destroyPcb(int pid)
 {
-	if (pid < 0) 
-		return false;
+	// 检查pid合理性
+	if (pid < 0)
+		return __pcbManager_PID_INVAILD;
+	// 检查pcb是否存在
 	Pcb * pcb = findPcbByPid(pid);
 	if (pcb == nullptr)
-		return false;
+		return __pcbManager_PCB_NOTFOUND;
+	// 如果是Manager进程则不允许被用户程序删除
 	if (pcb->getPriority() == 0)
-		return false;
-	std::vector<Pcb*> children = pcb->getChildrenPcb();
-	for (int i = 0; i < children.size(); i++) {
-		destroyPcb(children[i]->getPid());
-	}
+		return __pcbManager_PRIO_INVAILD;
+	// 获取pcb当前状态并从相应队列中移出
 	int status = pcb->getStatus();
-	if (status == ready) {
-		readyList.removePcbList(pid);
+	// 销毁pcb及其儿子并移除相应队列
+	// Ps:为了遵守在哪里申请在哪里释放原则，故不在pcb的destroy方法中释放儿子的内存
+	std::vector<Pcb*> recycleBin = pcb->destroy();
+	for (int i = 0; i < recycleBin.size(); i++) {
+		removePcbFromList(recycleBin[i]);
+		delete recycleBin[i];
 	}
-	else {
-		blockList.removePcbList(pid);
-	}
-	totalList.removePcbList(pid);
-	pcb->destroy();
-	delete pcb;
-	return true;
+	return __pcbManager_NO_ERR;
 }
 
 Pcb * PcbManager::findPcbByPid(int pid)
 {
+	// 检查pid合理性
 	if (pid < 0)
 		return nullptr;
+	// 从pcb管理队列中找到pcb实体并返回
 	Pcb * pcb = totalList.findPcbByPid(pid);
 	if (pcb == nullptr)
 		return nullptr;
@@ -144,4 +146,19 @@ int PcbManager::getPcbNumber()
 int PcbManager::getPrioMax()
 {
 	return priorityMax;
+}
+
+void PcbManager::removePcbFromList(Pcb * pcb)
+{
+	int status = pcb->getStatus();
+	totalList.removePcbList(pcb->getPid());
+	if (status == run) {
+		return;
+	}
+	else if (status == ready) {
+		readyList.removePcbList(pcb->getPid());
+	}
+	else {
+		blockList.removePcbList(pcb->getPid());
+	}
 }

@@ -9,11 +9,6 @@
 class Rcb;
 class PcbList;
 
-struct OccupyRcb {
-	Rcb *Rcb;
-	int requestNum;
-};
-
 enum PcbStatus {
 	run,
 	block,
@@ -26,42 +21,46 @@ class Pcb {
 private:
 	int pid;
 	std::string name;
-	std::vector<OccupyRcb> rcbList;
-	std::vector<OccupyRcb> rcbWaiting;
+	std::vector<Rcb *> usingRcb;
 	unsigned char status;
 	PcbList * listType;
 	Pcb * parent;
-	std::vector<Pcb*> children;
+	std::vector<Pcb *> children;
 	int priority;
 	static int id;
 
 public:
-	Pcb(Pcb * par, std::string nm = "Unknown", int prio =	1);
+	Pcb(Pcb * par, int prio, std::string nm = "Unknown");
 	~Pcb();
 
-	bool requestRcb(Rcb * targetRcb, int num = 1);
-	bool releaseRcb(int rid);
+	int requestRcb(Rcb *rcb, int num = 1);
+	int releaseRcb(Rcb * rcb, int num = 1);
 
-	bool removeWaitingRcb(Rcb * rcb);
-	bool removeListRcb(Rcb * rcb);
-
-	void destroy();
+	std::vector<Pcb*> destroy();
 
 	int getPid();
 	std::string getName();
-	int * getOccupyRidList();
-	unsigned char getStatus();
-	PcbList * getListType();
+
+	void changeList(PcbList * list);
+	PcbList * getList();
+
 	int getParentPid();
 	Pcb * getParentPcb();
-	int * getChildrenPid();
-	std::vector<Pcb*> getChildrenPcb();
+
+	int * getChilrendPid();
+	std::vector<Pcb *> getChilrenPcb();
+	int getChildrenNum();
+
 	int getPriority();
-	void changeStatus(int status);
-	void changeList(PcbList * list);
+
+	unsigned char getStatus();
+	void changeStatus(unsigned char status);
+
 	int getWaitingRcbNum();
 
 private:
 	void addChild(Pcb * child);
 	void deleteChild(Pcb * child);
+
+	int findUsingRcb(Rcb * rcb);
 };

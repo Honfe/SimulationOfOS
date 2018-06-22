@@ -27,9 +27,9 @@ void RcbManager::addResource(std::string nm, int rcbResourceNum)
 	++rcbNumMax;
 }
 
-Rcb * RcbManager::findRcbByRid(int rid)
+Rcb * RcbManager::findRcb(int rid)
 {
-	if (rid < 0) 
+	if (rid < 0)
 		return nullptr;
 	for (int i = 0; i < rcbList.size(); i++) {
 		if (rcbList[i]->getRid() == rid) {
@@ -39,7 +39,7 @@ Rcb * RcbManager::findRcbByRid(int rid)
 	return nullptr;
 }
 
-Rcb * RcbManager::findRcbByName(std::string nm)
+Rcb * RcbManager::findRcb(std::string nm)
 {
 	for (int i = 0; i < rcbList.size(); i++) {
 		if (rcbList[i]->getName() == nm) {
@@ -51,10 +51,10 @@ Rcb * RcbManager::findRcbByName(std::string nm)
 
 bool RcbManager::checkRcbValid(int rid)
 {
-	Rcb * rcb = findRcbByRid(rid);
+	Rcb * rcb = findRcb(rid);
 	if (rcb == nullptr)
 		return false;
-	if (rcb->getValidNumber() > 0)
+	if (rcb->getresNumber() > 0)
 		return true;
 	else
 		return false;
@@ -78,7 +78,7 @@ std::vector<RcbInfo> RcbManager::getRcbInfoList()
 	for (int i = 0; i < rcbList.size(); i++) {
 		rif.name = rcbList[i]->getName();
 		rif.rid = rcbList[i]->getRid();
-		rif.validNum = rcbList[i]->getValidNumber();
+		rif.validNum = rcbList[i]->getresNumber();
 		rcbInfo.push_back(rif);
 	}
 	return rcbInfo;

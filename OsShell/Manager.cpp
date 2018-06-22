@@ -7,6 +7,7 @@ Manager::Manager(int pcbPrio)
 	int pid = pcbManager.createPcb(nullptr, "Manager Task", 0);
 	Pcb * pcb = pcbManager.findPcbByPid(pid);
 	pcb->changeStatus(ready);
+	err = __manager_NO_ERR;
 }
 
 Manager::Manager(int pcbPrio, int rcbNum, int * resourceNumber, std::vector<std::string> nm)
@@ -16,6 +17,7 @@ Manager::Manager(int pcbPrio, int rcbNum, int * resourceNumber, std::vector<std:
 	int pid = pcbManager.createPcb(nullptr, "Manager Task", 0);
 	Pcb * pcb = pcbManager.findPcbByPid(pid);
 	pcb->changeStatus(ready);
+	err = __manager_NO_ERR;
 }
 
 Manager::~Manager()
@@ -36,30 +38,52 @@ int Manager::begin()
 
 int Manager::createPcb(int prio, std::string nm)
 {
-	if (prio <= 0) 
+	if (prio <= 0) {
+		err = __manager_PCB_PRIO_ERR;
 		return -1;
-	else 
-		return pcbManager.createPcb(running, nm, prio);
+	}
+	else {
+		int pid = pcbManager.createPcb(running, nm, prio);
+		err = (pid > 0) ? __manager_NO_ERR : __manager_PCB_CREATE_FAIL;
+		return pid;
+	}
 }
 
 bool Manager::destroyPcb(int pid)
 {
-	if (pcbManager.destroyPcb(pid)) {
+	switch (pcbManager.destroyPcb(pid)) {
+	case __pcbManager_NO_ERR:
+		err = __manager_NO_ERR;
 		schedul();
 		return true;
-	}
-	else {
+	case __pcbManager_PID_INVAILD:
+		err = __manager_PCB_PID_INVAILD;
+		return false;
+	case __pcbManager_PCB_NOTFOUND:
+		err = __manager_PCB_NOT_FOUND;
+		return false;
+	case __pcbManager_PRIO_INVAILD:
+		err = __manager_PCB_PRIO_ERR;
+		return false;
+	default:
+		err = __manager_OP_ERR;
 		return false;
 	}
 }
 
 bool Manager::requestRcbForPcb(int rid, int num)
 {
-	Rcb * rcb = rcbManager.findRcbByRid(rid);
-	if (running->requestRcb(rcb, num)) {
+	Rcb * rcb = rcbManager.findRcb(rid);
+	switch (running->requestRcb(rcb, num)) {
+	case __rcb_NO_ERR:
+		err = __manager_NO_ERR;
 		return true;
-	}
-	else {
+	case __rcb_OUT_OF_RES:
+		err = __manager_RES_OUT_TOTAL;
+		return false;
+	case __rcb_OUT_OF_VAL:
+		err = __manager_RES_OUT_NUM;
+	default:
 		running->changeStatus(block);
 		schedul();
 		return false;
@@ -74,24 +98,46 @@ bool Manager::requestRcbForPcbByName(std::string nm, int num)
 	return requestRcbForPcb(rid, num);
 }
 
-bool Manager::releaseRcbForPcb(int rid)
+bool Manager::releaseRcbForPcb(int rid, int num)
 {
-	return running->releaseRcb(rid);
+	Rcb * rcb = rcbManager.findRcb(rid);
+	int res = running->releaseRcb(rcb, num);
+	// schedul();
+	switch (res) {
+	case __rcb_OUT_OF_RES:
+		err = __manager_RES_OUT_TOTAL;
+		return false;
+	case __rcb_NO_ERR:
+		err = __manager_NO_ERR;
+		return true;
+	case __rcb_OUT_OF_HAVE:
+		err = __manager_RES_OUT_HAVE;
+		return false;
+	case __rcb_NOT_FOUND:
+		err = __manager_RES_NOT_FOUND;
+		return false;
+	default:
+		err = __manager_OP_ERR;
+		return false;
+	}
 }
 
-bool Manager::releaseRcbForPcbByName(std::string nm)
+bool Manager::releaseRcbForPcbByName(std::string nm, int num)
 {
 	int rid = searchRidByName(nm);
 	if (rid == -1)
 		return false;
-	return releaseRcbForPcb(rid);
+	return releaseRcbForPcb(rid, num);
 }
 
 int Manager::findPcbByName(std::string nm)
 {
 	Pcb * pcb = pcbManager.findPcbByName(nm);
-	if (pcb == nullptr)
+	if (pcb == nullptr) {
+		err = __manager_PCB_NOT_FOUND;
 		return -1;
+	}
+	err = __manager_NO_ERR;
 	return pcb->getPid();
 }
 
@@ -102,34 +148,40 @@ void Manager::addRcb(std::string nm, int rcbResNum)
 
 int Manager::searchRidByName(std::string nm)
 {
-	Rcb * rcb = rcbManager.findRcbByName(nm);
+	Rcb * rcb = rcbManager.findRcb(nm);
 	if (rcb == nullptr) {
+		err = __manager_RES_NOT_FOUND;
 		return -1;
 	}
 	else {
+		err = __manager_NO_ERR;
 		return rcb->getRid();
 	}
 }
 
 std::vector<PcbInfo> Manager::getTotalPcbInfo()
 {
+	err = __manager_NO_ERR;
 	return pcbManager.getTotalPcbInfo();
 }
 
 std::vector<RcbInfo> Manager::getTotalRcbInfo()
 {
+	err = __manager_NO_ERR;
 	return rcbManager.getRcbInfoList();
 }
 
 int Manager::pauseManager()
 {
 	if (running == nullptr) {
+		err = __manager_NO_RUNNING;
 		return -1;
 	}
 	int pid = running->getPid();
 	running->changeStatus(block);
 	pcbManager.insertReadyPcb(running->getPid());
 	running = nullptr;
+	err = __manager_NO_ERR;
 	return pid;
 }
 
@@ -159,7 +211,57 @@ int Manager::schedul()
 
 int Manager::timeOut()
 {
+	err = __manager_NO_ERR;
 	return schedul();
+}
+
+void Manager::restart()
+{
+	Pcb * pcb = pcbManager.findPcbByPid(0);
+	int * arr = pcb->getChilrendPid();
+	for (int i = 0; i < pcb->getChildrenNum(); i++) {
+		pcbManager.destroyPcb(arr[i]);
+	}
+	delete[] arr;
+}
+
+std::string Manager::getLatestErrStr()
+{
+	switch (err) {
+	case __manager_NO_ERR:
+		return "No error";
+	case __manager_RES_OUT_TOTAL:
+		return "Resource total number is not enough";
+	case __manager_RES_OUT_NUM:
+		return "Resource value number is not enough";
+	case __manager_RES_OUT_HAVE:
+		return "Apply too much resource";
+	case __manager_RES_NOT_FOUND:
+		return "Resource is not found";
+	case __manager_PCB_CREATE_FAIL:
+		return "Create pcb fail";
+	case __manager_PCB_PRIO_ERR:
+		return "Pcb's priority is not vaild";
+	case __manager_PCB_NOT_FOUND:
+		return "Pcb is not found";
+	case __manager_PCB_PID_INVAILD:
+		return "pid is not vaild";
+	case __manager_NO_RUNNING:
+		return "Manager is not running";
+	case __manager_OP_ERR:
+	default:
+		return "Op error! Find the programmer";
+	}
+}
+
+int Manager::getLatestErrCode()
+{
+	return err;
+}
+
+int Manager::prioMax()
+{
+	return pcbManager.getPrioMax();
 }
 
 void Manager::updateReadyList()

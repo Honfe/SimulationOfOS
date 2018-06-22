@@ -2,114 +2,74 @@
 
 int Pcb::id = 0;
 
-Pcb::Pcb(Pcb * par, std::string nm, int prio)
+Pcb::Pcb(Pcb * par, int prio, std::string nm)
 {
 	this->pid = id++;
 	this->name = nm;
-	this->status = unknown;
-	this->listType = nullptr;
-	this->parent = par;
 	this->priority = prio;
-	if (par != nullptr)
-		par->addChild(this);
+	this->status = ready;
+	this->parent = par;
+	// 排除根节点的情况，根节点没有父亲
+	if (this->parent != nullptr)
+		this->parent->addChild(this);
+	listType = nullptr;
 }
 
 Pcb::~Pcb()
 {
 }
 
-bool Pcb::requestRcb(Rcb * targetRcb, int num)
+int Pcb::requestRcb(Rcb * rcb, int num)
 {
-	OccupyRcb rcb{ targetRcb, num };
-	if (targetRcb->requestRcb(this, num)) {
-		rcbList.push_back(rcb);
-		return true;
-	}
-	else {
-		rcbWaiting.push_back(rcb);
-		status = block;
-		return false;
-	}
-}
-
-bool Pcb::releaseRcb(int rid)
-{
-	if (rcbList.size() == 0 && rcbWaiting.size() == 0) {
-		return false;
-	}
-	for (int i = 0; i < rcbList.size(); i++) {
-		if (rcbList[i].Rcb->getRid() == rid) {
-			if (!rcbList[i].Rcb->releaseRcb(this, rcbList[i].requestNum))
-				return  false;
-			else {
-				removeListRcb(rcbList[i].Rcb);
-				return true;
-			}
+	int res = rcb->requestRcb(this, num);
+	if (res == __rcb_NO_ERR) {
+		if (findUsingRcb(rcb) == -1) {
+			usingRcb.push_back(rcb);
 		}
 	}
-	for (int i = 0; i < rcbWaiting.size(); i++) {
-		if (rcbWaiting[i].Rcb->getRid() == rid) {
-			if (!rcbWaiting[i].Rcb->releaseRcb(this, rcbWaiting[i].requestNum))
-				return false;
-			else
-				return true;
-		}
-	}
-	return true;
+	return res;
 }
 
-bool Pcb::removeWaitingRcb(Rcb * rcb)
+int Pcb::releaseRcb(Rcb * rcb, int num)
 {
-	for (std::vector<OccupyRcb>::iterator i = rcbWaiting.begin(); i != rcbWaiting.end(); i++) {
-		if (i->Rcb->getRid() == rcb->getRid()) {
-			OccupyRcb or = *i;
-			rcbWaiting.erase(i);
-			// rcbList.push_back(or);
-			return true;
+	int res = rcb->releaseRcb(this, num);
+	switch (res) {
+	case __rcb_NO_ERR:
+	case __rcb_OUT_OF_HAVE:
+		if ((rcb->consultUsingRcb(this) + rcb->consultWaitRcb(this)) <= 0) {
+			usingRcb.erase(usingRcb.begin() + findUsingRcb(rcb));
 		}
+		break;
+	case __rcb_NOT_FOUND:
+	case __rcb_OUT_OF_RES:
+	default:
+		;
 	}
-	return false;
+	return res;
 }
 
-bool Pcb::removeListRcb(Rcb * rcb)
+std::vector<Pcb*> Pcb::destroy()
 {
-	for (std::vector<OccupyRcb>::iterator i = rcbList.begin(); i != rcbList.end(); i++) {
-		if (i->Rcb->getRid() == rcb->getRid()) {
-			OccupyRcb or = *i;
-			rcbList.erase(i);
-			return true;
-		}
+	// 进程被删除前，释放所有资源
+	for (int i = 0; i < usingRcb.size(); i++) {
+		usingRcb[i]->releaseAll(this);
 	}
-	return false;
-}
-
-
-
-void Pcb::destroy()
-{
-	// About pcb of chilren, I destroy it by Manager
-	/**
+	std::vector<Pcb*> ch;
+	// 自杀
+	ch.push_back(this);
+	// 父进程结束，子进程跟着结束
 	for (int i = 0; i < children.size(); i++) {
-		children[i]->destroy();
+		std::vector<Pcb*> temp = children[i]->destroy();
+		ch.insert(ch.end(), temp.begin(), temp.end());
 	}
-	children.clear();
-	*/
-	for (int i = 0; i < rcbList.size(); i++) {
-		rcbList[i].Rcb->releaseRcb(this, rcbList[i].requestNum);
-	}
-	rcbList.clear();
-	for (int i = 0; i < rcbWaiting.size(); i++) {
-		rcbWaiting[i].Rcb->releaseRcb(this, 0);
-	}
-	rcbWaiting.clear();
-	parent->deleteChild(this);
-	parent = nullptr;
-	status = none;
+	// 通知父进程自己挂掉了
+	this->parent->deleteChild(this);
+	return ch;
 }
 
 int Pcb::getPid()
 {
-	return pid;
+	return this->pid;
 }
 
 std::string Pcb::getName()
@@ -117,64 +77,73 @@ std::string Pcb::getName()
 	return this->name;
 }
 
-int * Pcb::getOccupyRidList()
+void Pcb::changeList(PcbList * list)
 {
-	int size = rcbList.size();
-	int * ridList = new int[size];
-	for (int i = 0; i < size; i++) {
-		ridList[i] = rcbList[i].Rcb->getRid();
-	}
-	return ridList;
+	this->listType = list;
 }
 
-unsigned char Pcb::getStatus()
+PcbList * Pcb::getList()
 {
-	return status;
-}
-
-PcbList * Pcb::getListType()
-{
-	return listType;
+	return this->listType;
 }
 
 int Pcb::getParentPid()
 {
-	return parent->getPid();
+	return this->parent->getPid();
 }
 
 Pcb * Pcb::getParentPcb()
 {
-	return parent;
+	return this->parent;
 }
 
-int * Pcb::getChildrenPid()
+int * Pcb::getChilrendPid()
 {
-	return nullptr;
+	int * childrenPid = new int[this->children.size()];
+	for (int i = 0; i < children.size(); i++) {
+		childrenPid[i] = children[i]->getPid();
+	}
+	return childrenPid;
 }
 
-std::vector<Pcb*> Pcb::getChildrenPcb()
+std::vector<Pcb*> Pcb::getChilrenPcb()
 {
-	return std::vector<Pcb*>(children);
+	std::vector<Pcb*> chPcb;
+	for (int i = 0; i < this->children.size(); i++) {
+		chPcb.push_back(this->children[i]);
+	}
+	return chPcb;
+}
+
+int Pcb::getChildrenNum()
+{
+	return this->children.size();
 }
 
 int Pcb::getPriority()
 {
-	return priority;
+	return this->priority;
 }
 
-void Pcb::changeStatus(int status)
+unsigned char Pcb::getStatus()
+{
+	return this->status;
+}
+
+void Pcb::changeStatus(unsigned char status)
 {
 	this->status = status;
 }
 
-void Pcb::changeList(PcbList * list)
-{
-	listType = list;
-}
-
 int Pcb::getWaitingRcbNum()
 {
-	return rcbWaiting.size();
+	int num = 0;
+	for (int i = 0; i < usingRcb.size(); i++) {
+		if (usingRcb[i]->consultWaitRcb(this) > 0) {
+			++num;
+		}
+	}
+	return num;
 }
 
 void Pcb::addChild(Pcb * child)
@@ -186,8 +155,17 @@ void Pcb::deleteChild(Pcb * child)
 {
 	for (std::vector<Pcb*>::iterator i = children.begin(); i != children.end(); i++) {
 		if ((*i)->getPid() == child->getPid()) {
-			children.erase(i);
-			return;
+			this->children.erase(i);
+			break;
 		}
 	}
+}
+
+int Pcb::findUsingRcb(Rcb * rcb)
+{
+	for (int i = 0; i < usingRcb.size(); i++) {
+		if (rcb->getRid() == usingRcb[i]->getRid())
+			return i;
+	}
+	return -1;
 }
