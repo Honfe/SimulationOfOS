@@ -22,7 +22,7 @@ Pcb::~Pcb()
 int Pcb::requestRcb(Rcb * rcb, int num)
 {
 	int res = rcb->requestRcb(this, num);
-	if (res == __rcb_NO_ERR) {
+	if (res == __rcb_NO_ERR) {		// 检查申请结果
 		if (findUsingRcb(rcb) == -1) {
 			usingRcb.push_back(rcb);
 		}
@@ -33,7 +33,7 @@ int Pcb::requestRcb(Rcb * rcb, int num)
 int Pcb::releaseRcb(Rcb * rcb, int num)
 {
 	int res = rcb->releaseRcb(this, num);
-	switch (res) {
+	switch (res) {		// 检查释放结果
 	case __rcb_NO_ERR:
 	case __rcb_OUT_OF_HAVE:
 		if ((rcb->consultUsingRcb(this) + rcb->consultWaitRcb(this)) <= 0) {
@@ -58,8 +58,8 @@ std::vector<Pcb*> Pcb::destroy()
 	// 自杀
 	ch.push_back(this);
 	// 父进程结束，子进程跟着结束
-	for (int i = 0; i < children.size(); i++) {
-		std::vector<Pcb*> temp = children[i]->destroy();
+	while (children.size()) {
+		std::vector<Pcb*> temp = children.front()->destroy();
 		ch.insert(ch.end(), temp.begin(), temp.end());
 	}
 	// 通知父进程自己挂掉了
@@ -139,6 +139,7 @@ int Pcb::getWaitingRcbNum()
 {
 	int num = 0;
 	for (int i = 0; i < usingRcb.size(); i++) {
+		// 访问进程是否有等待的资源
 		if (usingRcb[i]->consultWaitRcb(this) > 0) {
 			++num;
 		}

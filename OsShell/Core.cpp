@@ -125,7 +125,7 @@ void Core::exit()
 {
 	run = false;
 	on = false;
-	deletePcbByPid(0);
+	// deletePcbByPid(0);
 }
 
 std::string Core::getVersion()

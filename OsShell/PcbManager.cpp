@@ -34,8 +34,6 @@ int PcbManager::destroyPcb(int pid)
 	// 如果是Manager进程则不允许被用户程序删除
 	if (pcb->getPriority() == 0)
 		return __pcbManager_PRIO_INVAILD;
-	// 获取pcb当前状态并从相应队列中移出
-	int status = pcb->getStatus();
 	// 销毁pcb及其儿子并移除相应队列
 	// Ps:为了遵守在哪里申请在哪里释放原则，故不在pcb的destroy方法中释放儿子的内存
 	std::vector<Pcb*> recycleBin = pcb->destroy();
@@ -73,9 +71,9 @@ int PcbManager::checkPcbStatus(int pid)
 		return pcb->getStatus();
 }
 
-int PcbManager::getHighestPcb(int prio)
+int PcbManager::getHighestPcb()
 {
-	return readyList.getHighestPcb(prio);
+	return readyList.getHighestPcb();
 }
 
 bool PcbManager::insertReadyPcb(int pid)

@@ -75,18 +75,18 @@ map<string, coreFunction> mapFunction = {
 	{ "-clear", clearScreen },
 	{ "-sleep", sleepCore },
 	{ "-help", commandHelp },
-	{ "-version", showCoreVersion },
-	{ "-restart", restartCore }
+	{ "-version", showCoreVersion }
+//	{ "-restart", restartCore }
 };
 
 int main()
 {
 	Core core(3);
 	vector<string> nm;
-	nm.push_back("Printer");
-	nm.push_back("IO");
-	nm.push_back("KeyBoard");
-	nm.push_back("Disk");
+	nm.push_back("R1");
+	nm.push_back("R2");
+	nm.push_back("R3");
+	nm.push_back("R4");
 	int num[4] = { 1, 2, 3, 4 };
 	core.initial(4, num, nm);	// 初始化内核并开启内核
 	int pid = core.begin();

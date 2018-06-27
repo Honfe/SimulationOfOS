@@ -49,7 +49,7 @@ Rcb * RcbManager::findRcb(std::string nm)
 	return nullptr;
 }
 
-bool RcbManager::checkRcbValid(int rid)
+bool RcbManager::checkRcbVaild(int rid)
 {
 	Rcb * rcb = findRcb(rid);
 	if (rcb == nullptr)
@@ -64,7 +64,7 @@ std::vector<Pcb*> RcbManager::getReadyPcb()
 {
 	std::vector<Pcb*> readyPcbList;
 	for (int i = 0; i < this->rcbNumMax; i++) {
-		while (rcbList[i]->getReadyListSize()) {
+		while (rcbList[i]->getReadyListSize()) {	// 利用getReadyListSize方法来取得就绪等待唤醒表中进程的数目
 			readyPcbList.push_back(rcbList[i]->getOneReadyPcb());
 		}
 	}

@@ -38,6 +38,7 @@ int Manager::begin()
 
 int Manager::createPcb(int prio, std::string nm)
 {
+	// 检查优先级是否合法，prio=0的进程只能由系统创建，不能由用户创建
 	if (prio <= 0) {
 		err = __manager_PCB_PRIO_ERR;
 		return -1;
@@ -45,6 +46,7 @@ int Manager::createPcb(int prio, std::string nm)
 	else {
 		int pid = pcbManager.createPcb(running, nm, prio);
 		err = (pid > 0) ? __manager_NO_ERR : __manager_PCB_CREATE_FAIL;
+		schedulForCreate();
 		return pid;
 	}
 }
@@ -54,7 +56,7 @@ bool Manager::destroyPcb(int pid)
 	switch (pcbManager.destroyPcb(pid)) {
 	case __pcbManager_NO_ERR:
 		err = __manager_NO_ERR;
-		schedul();
+		schedul();		// 进程删除成功后还需要重新调度
 		return true;
 	case __pcbManager_PID_INVAILD:
 		err = __manager_PCB_PID_INVAILD;
@@ -187,10 +189,14 @@ int Manager::pauseManager()
 
 int Manager::schedul()
 {
+	// 将获得资源但未被唤醒的pcb加入就绪队列中
 	updateReadyList();
-	int pid = pcbManager.getHighestPcb(running->getPriority());
+	// 获取最高优先级的pid
+	int pid = pcbManager.getHighestPcb();
 	if (pid != -1) {
+		// 如果当前运行的进程仍在运行
 		if (running->getStatus() == run) {
+			// 比对当前运行的进程优先级和刚取出的进程优先级，如果运行的进程优先级高则不进行调度
 			if (!pcbManager.comparePcbPriority(running->getPid(), pid)) {
 				running->changeStatus(ready);
 				pcbManager.insertReadyPcb(running->getPid());
@@ -199,7 +205,7 @@ int Manager::schedul()
 				pcbManager.removeReadyPcb(pid);
 			}
 		}
-		else {
+		else {	// 当前运行的进程可能因为等待资源而被阻塞
 			pcbManager.insertBlockPcb(running->getPid());
 			running = pcbManager.findPcbByPid(pid);
 			running->changeStatus(run);
@@ -276,4 +282,18 @@ void Manager::updateReadyList()
 	}
 }
 
-
+int Manager::schedulForCreate()
+{
+	int pid = pcbManager.getHighestPcb();
+	if (pid != -1) {
+		// 比对当前运行的进程优先级和刚取出的进程优先级，如果运行的进程优先级高则不进行调度
+		if (pcbManager.comparePcbPriority(pid, running->getPid())) {
+			running->changeStatus(ready);
+			pcbManager.insertReadyPcb(running->getPid());
+			running = pcbManager.findPcbByPid(pid);
+			running->changeStatus(run);
+			pcbManager.removeReadyPcb(pid);
+		}
+	}
+	return running->getPid();
+}

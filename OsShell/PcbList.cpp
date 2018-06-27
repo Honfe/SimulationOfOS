@@ -13,8 +13,10 @@ PcbList::~PcbList()
 
 void PcbList::insertPcbList(Pcb * pcb)
 {
+	// 检查指针是否存在
 	if (pcb == nullptr)
 		return;
+	// 检查优先级合理性
 	if (pcb->getPriority() >= priorityMax) {
 		return;
 	}
@@ -23,6 +25,7 @@ void PcbList::insertPcbList(Pcb * pcb)
 
 Pcb * PcbList::findPcbByPid(int pid)
 {
+	// 检查pid是否合理
 	if (pid < 0) {
 		return nullptr;
 	}
@@ -38,6 +41,7 @@ Pcb * PcbList::findPcbByPid(int pid)
 
 Pcb * PcbList::findPcbByName(std::string nm)
 {
+	// 检查名字是否合理
 	if (nm.size() == 0) 
 		return nullptr;
 	for (int prio = 0; prio < priorityMax; prio++) {
@@ -53,8 +57,8 @@ Pcb * PcbList::findPcbByName(std::string nm)
 bool PcbList::removePcbList(int pid)
 {
 	Pcb * pcb = findPcbByPid(pid);
-	if (pcb == nullptr) return false;
-	int prio = pcb->getPriority();
+	if (pcb == nullptr) return false;	
+	int prio = pcb->getPriority();		// 获取优先级，方便后续查找
 	for (std::vector<Pcb*>::iterator i = list[prio].begin(); i != list[prio].end(); i++) {
 		if ((*i)->getPid() == pid) {
 			list[prio].erase(i);
@@ -64,10 +68,11 @@ bool PcbList::removePcbList(int pid)
 	return true;
 }
 
-int PcbList::getHighestPcb(int prio)
+int PcbList::getHighestPcb()
 {
+	// 由最高优先级开始往下遍历查找
 	for (int priority = priorityMax - 1; priority >= 0; priority--) {
-		if (list[priority].size() == 0) {
+		if (list[priority].size() == 0) {	// 队列为空则直接跳过
 			continue;
 		}
 		int pid = list[priority][0]->getPid();
