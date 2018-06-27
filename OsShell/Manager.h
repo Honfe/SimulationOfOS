@@ -2,7 +2,7 @@
 * FileName: Manager.h
 * Author: ZiQin
 * BuildDate: 2018-6-22
-* Version: 1.1.0
+* Version: 1.1.1
 */
 
 #pragma once
@@ -205,5 +205,5 @@ private:
 	* 参数：无
 	* 返回值：调度后运行的pid
 	*/
-	int schedulForCreate();
+	int schedulOnlyPriority();
 };

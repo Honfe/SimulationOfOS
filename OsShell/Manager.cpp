@@ -46,7 +46,7 @@ int Manager::createPcb(int prio, std::string nm)
 	else {
 		int pid = pcbManager.createPcb(running, nm, prio);
 		err = (pid > 0) ? __manager_NO_ERR : __manager_PCB_CREATE_FAIL;
-		schedulForCreate();
+		schedulOnlyPriority();
 		return pid;
 	}
 }
@@ -56,7 +56,7 @@ bool Manager::destroyPcb(int pid)
 	switch (pcbManager.destroyPcb(pid)) {
 	case __pcbManager_NO_ERR:
 		err = __manager_NO_ERR;
-		schedul();		// 进程删除成功后还需要重新调度
+		schedulOnlyPriority();		// 进程删除成功后还需要重新调度
 		return true;
 	case __pcbManager_PID_INVAILD:
 		err = __manager_PCB_PID_INVAILD;
@@ -104,7 +104,7 @@ bool Manager::releaseRcbForPcb(int rid, int num)
 {
 	Rcb * rcb = rcbManager.findRcb(rid);
 	int res = running->releaseRcb(rcb, num);
-	// schedul();
+	schedulOnlyPriority();	
 	switch (res) {
 	case __rcb_OUT_OF_RES:
 		err = __manager_RES_OUT_TOTAL;
@@ -282,11 +282,12 @@ void Manager::updateReadyList()
 	}
 }
 
-int Manager::schedulForCreate()
+int Manager::schedulOnlyPriority()
 {
+	updateReadyList();
 	int pid = pcbManager.getHighestPcb();
 	if (pid != -1) {
-		// 比对当前运行的进程优先级和刚取出的进程优先级，如果运行的进程优先级高则不进行调度
+		// 比对当前运行的进程优先级和刚取出的进程优先级，如果运行的进程优先级高或相等则不进行调度
 		if (pcbManager.comparePcbPriority(pid, running->getPid())) {
 			running->changeStatus(ready);
 			pcbManager.insertReadyPcb(running->getPid());
